@@ -1,50 +1,49 @@
-const express = require("express");
-const path = require("path");
-const { open } = require("sqlite");
-const sqlite3 = require("sqlite3");
+import express from "express";
+import cors from "cors";
+import ENV from "./config/env.js";
+import connectDB from "./config/database.js";
+import { notFound, errorHandler } from "./middleware/error.middleware.js";
 const app = express();
+
+app.use(cors({
+    origin: [ENV.FRONTEND_URL, ENV.ADMIN_URL],
+    credentials: true,
+}))
+
 app.use(express.json());
-const dbPath = path.join(__dirname, "movies.db");
+app.get("/api/health", (req, res) => {
+    res.status(200).json({
+        message: "Server is healthy",
+        status: "success",
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        version:"1.0.0",
+    })
+});
 
-let db = null;
-const initializeDBAndServer = async () => {
- try {
-       db = await open({
-        filename: dbPath,
-        driver: sqlite3.Database,
-        });
-        app.listen(3000, () => {
-            console.log("Server Running at http://localhost:3000/");
-        });
-  } catch (e) {
-    console.log(`DB Error: ${e.message}`);
-    process.exit(1);
-  }
-};
-initializeDBAndServer();
+//api endpoints
+app.use("api/admin",adminRoutes);
+app.use("api/user",userRoutes);
+app.use("api/teacher",teacherRoutes);
+//last routes
+app.use(notFound);
+app.use(errorHandler);
+const startServer = async () => {
+    try {
+        const conn=await connectDB();
+        if(conn.readyState === 1) {
+            console.log("Database connection established successfully.");
+            app.listen(ENV.PORT, () => {
+                console.log(`Server is running on port ${ENV.PORT}`);
+            });
+        }else{
+            console.error("Database connection is not ready. Exiting...");
+            process.exit(1); // Exit the process with an error code
+        }
+    } catch (error) {
+        console.error("Failed to connect to the database:", error);
+        process.exit(1); // Exit the process with an error code
+    }
+}
 
-app.get("/movies/:movieId/", async (request, response) => {
-    const { movieId } = request.params;
-    const getMovieQuery = `
-    SELECT
-      movie_id AS movieId,
-      title,
-      director_id AS directorId,
-      rating,
-      duration,
-      release_date AS releaseDate
-    FROM
-      movie
-    WHERE
-      movie_id = ${movieId};`;
-    const movie = await db.get(getMovieQuery);
-    const formattedMovie = {
-        movie_id: movie.movieId || movie.movie_id,
-        title: movie.title,
-        director_id: movie.directorId || movie.director_id,
-        rating: movie.rating,
-        duration: movie.duration,
-        release_date: movie.releaseDate || movie.release_date
-    };
-    response.status(200).send(formattedMovie);
-})
+startServer();
