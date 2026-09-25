@@ -20,7 +20,7 @@ const adminSchema = new Schema({
         minLength: [8, 'Password should be at least 8 characters'], select: false
     },
     phone: {
-        type: String, required: true, trim: true,
+        type: String, 
         maxLength: [20, 'Phone number should be less than 20 characters']
     },
     role: {

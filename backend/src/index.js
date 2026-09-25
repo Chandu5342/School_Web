@@ -3,6 +3,10 @@ import cors from "cors";
 import ENV from "./config/env.js";
 import connectDB from "./config/database.js";
 import { notFound, errorHandler } from "./middleware/error.middleware.js";
+import adminRoutes from "./routes/admin.routes.js";
+import userRoutes from "./routes/user.routes.js";
+import teacherRoutes from "./routes/teacher.routes.js";
+import seedAdmin from "./config/adminSeed.js";
 const app = express();
 
 app.use(cors({
@@ -33,6 +37,8 @@ const startServer = async () => {
         const conn=await connectDB();
         if(conn.readyState === 1) {
             console.log("Database connection established successfully.");
+            //add the admin seedign if not there
+            await seedAdmin();
             app.listen(ENV.PORT, () => {
                 console.log(`Server is running on port ${ENV.PORT}`);
             });
